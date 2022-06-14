@@ -7,7 +7,7 @@ import {GlobalStyles} from '../../constants/styles';
 import Modal from 'react-native-modal';
 import DatePicker from 'react-native-date-picker';
 import {IconButton, Colors} from 'react-native-paper';
-
+import * as Keychain from 'react-native-keychain';
 const width = Dimensions.get('window').width; //full width
 const height = Dimensions.get('window').height; //full heigth
 function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
@@ -23,11 +23,11 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     {label: '3 times a day', value: 3},
     {label: 'More', value: 4},
   ];
-  const takeMed = [1, 2, 3, 4, 5, 'More'];
+  const takeMed = [1 / 2, 1, 2, 3, 4, 'More'];
 
   const [singleInputs, setSingleInputs] = useState({
-    medName: {
-      value: defaultValues ? defaultValues.medName : '',
+    treatment: {
+      value: '',
       isValid: true,
     },
     reminderTimes: {
@@ -35,7 +35,7 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
       isValid: true,
     },
     startDate: new Date(),
-    duration: 'onGoingTreatment',
+    durationType: 'onGoingTreatment',
     numberOfDays: 30,
     // days: {
     //   everyDay: defaultValues ? defaultValues.everyDay : true,
@@ -54,10 +54,10 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
         value: defaultValues ? defaultValues.takePill : 1,
         isValid: true,
       },
-      // description: {
-      //   value: defaultValues ? defaultValues.description : "",
-      //   isValid: true,
-      // },
+      medName: {
+        value: '',
+        isValid: true,
+      },
     },
   ]);
 
@@ -65,20 +65,24 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     setShowTimePicker(false);
   }, [showTimePicker]);
 
-  function submitHandler() {
+  async function submitHandler() {
     let arrSchedule = [];
     inputs.map(item => {
       arrSchedule.push({
         time: new Date(item.time.value),
         takePill: item.takePill.value,
+        medName: item.medName.value,
       });
     });
 
+    const credentials = await Keychain.getGenericPassword();
     const singleInputsData = {
-      medName: singleInputs.medName.value,
+      treatment: singleInputs.treatment.value,
       reminderTimes: singleInputs.reminderTimes.value,
       startDate: new Date(singleInputs.startDate),
-      duration: singleInputs.duration,
+      durationType: singleInputs.durationType,
+      numberOfDays: singleInputs.numberOfDays,
+      user_id: credentials.username,
     };
     const expenseData = {
       ...singleInputsData,
@@ -86,13 +90,13 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     };
 
     // console.log(expenseData);
-    // const medNameIsValid = expenseData.medName.trim().length > 0;
+    // const treatmentIsValid = expenseData.treatment.trim().length > 0;
     // const dateIsValid = expenseData.date !== "Invalid Date";
     // const descriptionIsValid = expenseData.description.trim().length > 0;
     // const reminderIsValid = expenseData.reminderTimes.trim().length > 0;
 
     // if (
-    //   !medNameIsValid ||
+    //   !treatmentIsValid ||
     //   !dateIsValid ||
     //   !reminderIsValid
     //   // ||
@@ -102,7 +106,7 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     //   // Alert.alert("Invalid input", "Please check your input values");
     //   setInputs((currInputs) => {
     //     return {
-    //       medName: { value: currInputs.medName.value, isValid: medNameIsValid },
+    //       treatment: { value: currInputs.treatment.value, isValid: treatmentIsValid },
     //       time: { value: currInputs.date.value, isValid: dateIsValid },
     //       description: {
     //         value: currInputs.description.value,
@@ -116,13 +120,13 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     //   });
     //   return;
     // }
-
-    onSubmit(expenseData);
+    console.log(expenseData);
+    // onSubmit(expenseData);
   }
 
   function singleInputsHandler(inputIdentifier, enteredValue) {
     let validity = true;
-    if (inputIdentifier === 'medName' && enteredValue.trim().length > 0)
+    if (inputIdentifier === 'treatment' && enteredValue.trim().length > 0)
       validity = true;
     else validity = false;
     if (inputIdentifier === 'reminderTimes') {
@@ -152,7 +156,7 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     if (enteredValue === 'numberOfDays') {
       setModalVisible(true);
     }
-    console.log(enteredValue);
+
     setSingleInputs(curinputs => {
       return {
         ...curinputs,
@@ -208,6 +212,10 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
             value: defaultValues ? defaultValues.description : '',
             isValid: true,
           },
+          medName: {
+            value: '',
+            isValid: true,
+          },
         });
       }
       showTime.push(false);
@@ -216,7 +224,6 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     setInputs(_inputs);
   };
   const inputChangedHandler = (inputIdentifier, enteredValue, index) => {
-    console.log(index);
     if (inputIdentifier === 'time') {
       const arr = [showTimePicker];
       arr[index] = false;
@@ -229,7 +236,7 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
     if (inputIdentifier === 'date') {
       setShowDatePicker(false);
     }
-    console.log(enteredValue);
+
     const formInputs = [...inputs];
     formInputs[index][inputIdentifier].value = enteredValue;
     setInputs(formInputs);
@@ -288,13 +295,13 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
       <Text style={styles.title}>Your Expense</Text>
       <View style={styles.inputsRow}>
         <Input
-          label="Medicine Name"
+          label="Treatment"
           Type="text"
-          invalid={!singleInputs.medName.isValid}
+          invalid={!singleInputs.treatment.isValid}
           style={styles.rowInput}
           inputConfig={{
-            onChangeText: text => singleInputsHandler('medName', text),
-            value: singleInputs.medName.value,
+            onChangeText: text => singleInputsHandler('treatment', text),
+            value: singleInputs.treatment.value,
           }}
         />
       </View>
@@ -347,100 +354,113 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
           {inputs.length > 0 &&
             inputs.map((input, key) => {
               return (
-                <View style={styles.inputsRow} key={key}>
-                  <View style={[styles.inputContainer]}>
-                    <Text
-                      style={[
-                        styles.label,
-                        input.time.isValid && styles.invalidLabel,
-                      ]}>
-                      Time
-                    </Text>
+                <View style={[styles.inputsRow]} key={key}>
+                  {/* <View style={styles.inputsRow}>
+                    <Input
+                      label="Medicine Name"
+                      Type="text"
+                      // invalid={!singleInputs.medName.isValid}
+                      style={styles.rowInput}
+                      inputConfig={{
+                        onChangeText: text =>
+                          singleInputsHandler('medName', text),
+                        value: input.medName.value,
+                      }}
+                    />
+                  </View> */}
+                  <View
+                    style={
+                      ([styles.inputContainer],
+                      {flexDirection: 'column', flex: 1})
+                    }>
+                    <Input
+                      label="Medicine Name"
+                      Type="text"
+                      // invalid={!singleInputs.medName.isValid}
+                      style={{width: width / 1.4}}
+                      inputConfig={{
+                        onChangeText: text => {
+                          inputChangedHandler('medName', text, key);
+                        },
+                        value: input.medName.value,
+                      }}
+                    />
 
                     <View style={{flexDirection: 'row'}}>
-                      <Text style={styles.dateInput}>
-                        {timePickerValue(input.time.value)}
-                      </Text>
-                      <IconButton
-                        icon="clock"
-                        color={Colors.red500}
-                        size={20}
-                        onPress={() => {
+                      <View style={{flexDirection: 'column', flex: 1}}>
+                        <Text
+                          style={[
+                            styles.label,
+                            input.time.isValid && styles.invalidLabel,
+                          ]}>
+                          Time
+                        </Text>
+
+                        <View style={{flexDirection: 'row'}}>
+                          <Text style={styles.dateInput}>
+                            {timePickerValue(input.time.value)}
+                          </Text>
+                          <IconButton
+                            icon="clock"
+                            color={Colors.red500}
+                            size={20}
+                            onPress={() => {
+                              const arr = [showTimePicker];
+                              arr[key] = true;
+                              setShowTimePicker(arr);
+                            }}
+                          />
+                        </View>
+                      </View>
+
+                      <DatePicker
+                        modal
+                        mode="time"
+                        open={showTimePicker[key]}
+                        date={new Date(input.time.value)}
+                        onConfirm={date => {
+                          inputChangedHandler('time', date, key);
+                        }}
+                        onCancel={() => {
                           const arr = [showTimePicker];
-                          arr[key] = true;
+                          arr[key] = false;
                           setShowTimePicker(arr);
                         }}
                       />
+
+                      <Input
+                        label="Take Pil"
+                        Type="dropdown"
+                        inputConfig={{
+                          data: takeMed,
+                          defaultButtonText: 1,
+                          buttonStyle: {
+                            backgroundColor: '#f5f6fa',
+                            padding: 6,
+                            borderRadius: 6,
+                            fontSize: 10,
+                            color: GlobalStyles.colors.primary500,
+                            width: 100,
+                          },
+                          buttonTextStyle: {fontSize: 16, color: 'blue'},
+                          defaultValue: input.takePill.value,
+                          onSelect: (selectedItem, index) => {
+                            inputChangedHandler('takePill', selectedItem, key);
+                          },
+                          buttonTextAfterSelection: (selectedItem, index) => {
+                            // text represented after item is selected
+                            // if data array is an array of objects then return selectedItem.property to render after item is selected
+                            return selectedItem;
+                          },
+                          rowTextForSelection: (item, index) => {
+                            // text represented for each item in dropdown
+                            // if data array is an array of objects then return item.property to represent item in dropdown
+                            return item;
+                          },
+                        }}
+                      />
                     </View>
-
-                    <DatePicker
-                      modal
-                      mode="time"
-                      open={showTimePicker[key]}
-                      date={new Date(input.time.value)}
-                      onConfirm={date => {
-                        inputChangedHandler('time', date, key);
-                      }}
-                      onCancel={() => {
-                        const arr = [showTimePicker];
-                        arr[key] = false;
-                        setShowTimePicker(arr);
-                      }}
-                    />
                   </View>
-                  {/* <Input
-                    label="Time"
-                    style={styles.rowInput}
-                    invalid={!input.time.isValid}
-                    Type="time"
-                    pickerShow={showTimePicker}
-                    dateShow={showDatePicker}
-                    onPress={() => {
-                      setShowTimePicker(true);
-                      setShowDatePicker(false);
-                    }}
-                    inputConfig={{
-                      value:
-                        input.time.value === ''
-                          ? new Date()
-                          : new Date(input.time.value),
-                      mode: 'time',
-                      onChange: (event, selectedDate) =>
-                        inputChangedHandler('time', selectedDate, input.id),
-                    }}
-                  /> */}
-
-                  <Input
-                    label="Take Pil"
-                    Type="dropdown"
-                    inputConfig={{
-                      data: takeMed,
-                      defaultButtonText: 1,
-                      buttonStyle: {
-                        backgroundColor: '#f5f6fa',
-                        padding: 6,
-                        borderRadius: 6,
-                        fontSize: 10,
-                        color: GlobalStyles.colors.primary500,
-                        width: 100,
-                      },
-                      buttonTextStyle: {fontSize: 16, color: 'blue'},
-                      defaultValue: input.takePill.value,
-                      onSelect: (selectedItem, index) => {
-                        inputChangedHandler('takePill', selectedItem, key);
-                      },
-                      buttonTextAfterSelection: (selectedItem, index) => {
-                        // text represented after item is selected
-                        // if data array is an array of objects then return selectedItem.property to render after item is selected
-                        return selectedItem;
-                      },
-                      rowTextForSelection: (item, index) => {
-                        // text represented for each item in dropdown
-                        // if data array is an array of objects then return item.property to represent item in dropdown
-                        return item;
-                      },
-                    }}
-                  />
                 </View>
               );
             })}
@@ -504,11 +524,11 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
               inputConfig={{
                 value: 'onGoingTreatment',
                 status:
-                  singleInputs.duration === 'onGoingTreatment'
+                  singleInputs.durationType === 'onGoingTreatment'
                     ? 'checked'
                     : 'unchecked',
                 onPress: () =>
-                  radioInputHandler('duration', 'onGoingTreatment'),
+                  radioInputHandler('durationType', 'onGoingTreatment'),
               }}
             />
             <Text style={{marginTop: 20}}>Ongoing Treatment</Text>
@@ -526,10 +546,11 @@ function ExpenseForm({submitButtonLabel, onCancel, onSubmit, defaultValues}) {
               inputConfig={{
                 value: 'numberOfDays',
                 status:
-                  singleInputs.duration === 'numberOfDays'
+                  singleInputs.durationType === 'numberOfDays'
                     ? 'checked'
                     : 'unchecked',
-                onPress: () => radioInputHandler('duration', 'numberOfDays'),
+                onPress: () =>
+                  radioInputHandler('durationType', 'numberOfDays'),
               }}
             />
             <Text style={{marginTop: 20}}>Number Of Days</Text>
@@ -558,7 +579,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: 'black',
-    marginVertical: 24,
     textAlign: 'center',
   },
   subTitle: {

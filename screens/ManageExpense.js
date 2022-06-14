@@ -5,10 +5,12 @@ import Button from '../components/UI/Button';
 import {GlobalStyles} from '../constants/styles';
 import {ExpensesContext} from '../store/expenses-context';
 import ExpenseForm from '../components/ManageExpense/ExpenseForm';
-import {apiDev} from '../constants';
+import {apiDevIp} from '../constants';
 import ApiKeys from '../constants/ApiKeys';
 import {initializeApp} from 'firebase/app';
 import {getAuth, onAuthStateChanged} from 'firebase/auth';
+import * as Keychain from 'react-native-keychain';
+
 import PushNotification, {Importance} from 'react-native-push-notification';
 import {
   ref,
@@ -228,27 +230,24 @@ function ManageExpense({route, navigation}) {
     const dataString = JSON.stringify(expenseData);
 
     setNotifications(expenseData);
-    // fetch(apiDev + '/posts/', {
-    //   method: 'POST',
-    //   headers: {
-    //     Accept: 'application/json',
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: dataString,
-    // })
-    //   .then(res => res.json())
-    //   .then(
-    //     result => {
-    //       setNotifications(expenseData);
-    //       // Alert.alert({
-    //       //   title: 'Information',
-    //       //   message: 'Data berhasil dimasukan!',
-    //       // });
-    //     },
-    //     error => {
-    //       console.log(error);
-    //     },
-    //   );
+    fetch(apiDevIp + '/jobScheduler/', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: dataString,
+    })
+      .then(res => res.json())
+      .then(
+        result => {
+          setNotifications(expenseData);
+          Alert.alert('Data berhasil dimasukan!');
+        },
+        error => {
+          console.log(error);
+        },
+      );
   }
 
   return (
